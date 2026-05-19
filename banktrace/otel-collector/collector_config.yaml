@@ -2,69 +2,50 @@ receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317    # recibe de los microservicios
+        endpoint: 0.0.0.0:4317
       http:
-        endpoint: 0.0.0.0:4318    # alternativa HTTP
- 
+        endpoint: 0.0.0.0:4318
+
 processors:
-  # Agrupa spans en batch — PROCESAMIENTO ASINCRONO
   batch:
     send_batch_size: 1024
-    timeout: 10s                  # envia cada 10s o cuando llega a 1024 spans
+    timeout: 10s
     send_batch_max_size: 2048
- 
-  # Limita uso de memoria del Collector
+
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
     spike_limit_mib: 128
- 
-  # Enriquece spans con atributos de infraestructura
+
   resourcedetection:
     detectors: [env, system]
     timeout: 5s
- 
+
 exporters:
-  # Exporta a New Relic via OTLP (TLS requerido)
   otlp/newrelic:
     endpoint: otlp.nr-data.net:4317
     tls:
-      insecure: false             # New Relic requiere TLS
+      insecure: false
     headers:
-      api-key: '${NEW_RELIC_LICENSE_KEY}'
+      api-key: "0049dfc2672fce436793b1be5c48c719b824NRAL"
     sending_queue:
       enabled: true
       num_consumers: 10
-      queue_size: 10000           # cola asincrona de hasta 10000 batches
+      queue_size: 10000
     retry_on_failure:
       enabled: true
       initial_interval: 5s
       max_interval: 30s
       max_elapsed_time: 300s
- 
-  # Log local para debug (opcional)
-  logging:
-    loglevel: warn
- 
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resourcedetection, batch]
       exporters: [otlp/newrelic]
- 
+
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: [otlp/newrelic]
- 
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp/newrelic]
- 
-  telemetry:
-    logs:
-      level: warn
-    metrics:
-      address: 0.0.0.0:8888     # metricas del propio Collector
